@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen Time Analytics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #FDFCFA;
+      color: #2A2A2A;
+      overflow-x: hidden;
+    }
+
+    .display-font {
+      font-family: 'Fraunces', serif;
+      font-optical-sizing: auto;
+    }
+
+    .card {
+      background: #FFFFFF;
+      border-radius: 20px;
+      box-shadow: 
+        0 1px 2px rgba(0, 0, 0, 0.02),
+        0 4px 8px rgba(0, 0, 0, 0.03),
+        0 12px 24px rgba(0, 0, 0, 0.04);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: 
+        radial-gradient(circle at 20% 50%, rgba(107, 142, 127, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 159, 128, 0.02) 0%, transparent 50%);
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    .stat-card {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.02),
+        0 8px 16px rgba(0, 0, 0, 0.03),
+        0 16px 32px rgba(0, 0, 0, 0.04);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .stat-card:nth-child(1) { animation-delay: 0.1s; }
+    .stat-card:nth-child(2) { animation-delay: 0.2s; }
+    .stat-card:nth-child(3) { animation-delay: 0.3s; }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.03),
+        0 12px 24px rgba(0, 0, 0, 0.04),
+        0 24px 48px rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 100% 0%, rgba(107, 142, 127, 0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #F0EDE8;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 8px;
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .bar {
+      background: #6B8E7F;
+      border-radius: 8px 8px 0 0;
+      transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      cursor: pointer;
+    }
+
+    .bar:hover {
+      background: #5A7A6D;
+    }
+
+    .bar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 8px 8px 0 0;
+    }
+
+    @keyframes slideUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 32px;
+      opacity: 0;
+      animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+    }
+
+    .ring-progress {
+      transform: rotate(-90deg);
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .number-count {
+      display: inline-block;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .pulse-dot {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    /* Texture overlay */
+    .noise-texture {
+      position: relative;
+    }
+
+    .noise-texture::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      mix-blend-mode: overlay;
+      opacity: 0.4;
+    }
+
+    .app-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 18px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .app-icon:hover {
+      transform: scale(1.1);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #E8E4DD, transparent);
+      margin: 32px 0;
+    }
+  </style>
+</head>
+<body class="noise-texture">
+  <div class="min-h-screen p-6 md:p-8 lg:p-12">
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <header class="mb-10 fade-in">
+        <div class="flex items-start justify-between">
+          <div>
+            <h1 class="text-4xl md:text-5xl font-bold mb-2 text-[#2A2A2A] display-font">Screen Time</h1>
+            <p class="text-[#706C64] text-lg">Weekly analytics · Dec 6–12, 2026</p>
+          </div>
+          <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm">
+            <div class="w-2 h-2 rounded-full bg-[#6B8E7F] pulse-dot"></div>
+            <span class="text-sm font-medium text-[#706C64]">Live tracking</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-8">
+          <!-- Stat Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Total Screen Time -->
+            <div class="stat-card">
+              <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 rounded-xl bg-[#6B8E7F] bg-opacity-10 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-[#6B8E7F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <span class="badge bg-[#6B8E7F] bg-opacity-10 text-[#6B8E7F]">Week</span>
+              </div>
+              <div class="display-font text-5xl font-bold text-[#2A2A2A] mb-2">
+                <span class="number-count" data-target="42">0</span><span class="text-3xl text-[#706C64]">h</span>
+              </div>
+              <p class="text-[#706C64] font-medium">Total Screen Time</p>
+              <div class="mt-4 flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4 text-[#FF9F80]" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="text-[#FF9F80] font-semibold">12% vs last week</span>
+              </div>
+            </div>
+
+            <!-- Most Used App -->
+            <div class="stat-card">
+              <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 rounded-xl bg-[#8B7FE8] bg-opacity-10 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-[#8B7FE8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                  </svg>
+                </div>
+                <span class="badge bg-[#8B7FE8] bg-opacity-10 text-[#8B7FE8]">Top</span>
+              </div>
+              <div class="display-font text-5xl font-bold text-[#2A2A2A] mb-2">
+                <span class="number-count" data-target="14.2">0</span><span class="text-3xl text-[#706C64]">h</span>
+              </div>
+              <p class="text-[#706C64] font-medium">Instagram</p>
+              <div class="mt-4 flex items-center gap-2">
+                <div class="flex-1 h-2 bg-[#F0EDE8] rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-[#8B7FE8] to-[#A89FF0] rounded-full" style="width: 0%" data-width="68%"></div>
+                </div>
+                <span class="text-sm font-semibold text-[#706C64]">68%</span>
+              </div>
+            </div>
+
+            <!-- Daily Average -->
+            <div class="stat-card">
+              <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 rounded-xl bg-[#F4A261] bg-opacity-10 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-[#F4A261]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                  </svg>
+                </div>
+                <span class="badge bg-[#F4A261] bg-opacity-10 text-[#F4A261]">Avg</span>
+              </div>
+              <div class="display-font text-5xl font-bold text-[#2A2A2A] mb-2">
+                <span class="number-count" data-target="6">0</span><span class="text-3xl text-[#706C64]">h</span>
+              </div>
+              <p class="text-[#706C64] font-medium">Daily Average</p>
+              <div class="mt-4 flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4 text-[#6B8E7F]" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="text-[#6B8E7F] font-semibold">8% vs last week</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weekly Bar Chart -->
+          <div class="card p-8 fade-in" style="animation-delay: 0.5s;">
+            <div class="flex items-center justify-between mb-8">
+              <div>
+                <h2 class="text-2xl font-bold text-[#2A2A2A] mb-1">Weekly Usage</h2>
+                <p class="text-[#706C64]">Daily screen time breakdown</p>
+              </div>
+              <div class="flex gap-2">
+                <button class="px-4 py-2 rounded-xl bg-[#6B8E7F] text-white font-medium text-sm shadow-sm hover:bg-[#5A7A6D] transition-colors">
+                  This Week
+                </button>
+                <button class="px-4 py-2 rounded-xl bg-[#F0EDE8] text-[#706C64] font-medium text-sm hover:bg-[#E8E4DD] transition-colors">
+                  Last Week
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-end justify-between gap-4 h-64" id="barChart">
+              <!-- Monday -->
+              <div class="flex-1 flex flex-col items-center gap-3">
+                <div class="w-full bg-[#F0EDE8] rounded-lg relative flex items-end justify-center" style="height: 100%;">
+                  <div class="bar w-full" data-height="65%" style="height: 0%;">
+                    <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-[#2A2A2A] text-white px-3 py-1 rounded-lg text-sm font-semibold opacity-0 transition-opacity duration-300 whitespace-nowrap chart-tooltip">
+                      5.2h
+                    </div>
+                  </div>
+                </div>
+                <span class="text-sm font-semibold text-[#706C64]">Mon</span>
+              </div>
+
+              <!-- Tuesday -->
+              <div class="flex-1 flex flex-col items-center gap-3">
+                <div class="w-full bg-[#F0EDE8] rounded-lg relative flex items-end justify-center" style="height: 100%;">
+                  <div class="bar w-full" data-height="75%" style="height: 0%;">
+                    <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-[#2A2A2A] text-white px-3 py-1 rounded-lg text-sm font-semibold opacity-0 transition-opacity duration-300 whitespace-nowrap chart-tooltip">
+                      6.0h
+                    </div>
+                  </div>
+                </div>
+                <span class="text-sm font-semibold text-[#706C64]">Tue</span>
+              </div>
+
+              <!-- Wednesday -->
+              <div class="flex-1 flex flex-col items-center gap-3">
+                <div class="w-full bg-[#F0EDE8] rounded-lg relative flex items-end justify-center" style="height: 100%;">
+                  <div class="bar w-full" data-height="58%" style="height: 0%;">
+                    <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-[#2A2A2A] text-white px-3 py-1 rounded-lg text-sm font-semibold opacity-0 transition-opacity duration-300 whitespace-nowrap chart-tooltip">
+                      4.6h
+                    </div>
+                  </div>
+                </div>
+                <span class="text-sm font-semibold text-[#706C64]">Wed</span>
+              </div>
+
+              <!-- Thursday -->
+              <div class="flex-1 flex flex-col items-center gap-3">
+                <div class="w-full bg-[#F0EDE8] rounded-lg relative flex items-end justify-center" style="height: 100%;">
+                  <div class="bar w-full" data-height="82%" style="height: 0%;">
+                    <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-[#2A2A2A] text-white px-3 py-1 rounded-lg text-sm font-semibold opacity-0 transition-opacity duration-300 whitespace-nowrap chart-tooltip">
+                      6.6h
+                    </div>
+                  </div>
+                </div>
+                <span class="text-sm font-semibold text-[#706C64]">Thu</span>
+              </div>
+
+              <!-- Friday -->
+              <div class="flex-1 flex flex-col items-center gap-3">
+                <div class="w-full bg-[#F0EDE8] rounded-lg relative flex items-end justify-center" style="height: 100%;">
+                  <div class="bar w-full" data-height="95%" style="height: 0%;">
+                    <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-[#2A2A2A] text-white px-3 py-1 rounded-lg text-sm font-semibold opacity-0 transition-opacity duration-300 whitespace-nowrap chart-tooltip">
+                      7.6h
+                    </div>
+                  </div>
+                </div>
+                <span class="text-sm font-semibold text-[#706C64]">Fri</span>
+              </div>
+
+              <!-- Saturday -->
+              <div class="flex-1 flex flex-col items-center gap-3">
+                <div class="w-full bg-[#F0EDE8] rounded-lg relative flex items-end justify-center" style="height: 100%;">
+                  <div class="bar w-full" data-height="100%" style="height: 0%;">
+                    <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-[#2A2A2A] text-white px-3 py-1 rounded-lg text-sm font-semibold opacity-0 transition-opacity duration-300 whitespace-nowrap chart-tooltip">
+                      8.0h
+                    </div>
+                  </div>
+                </div>
+                <span class="text-sm font-semibold text-[#706C64]">Sat</span>
+              </div>
+
+              <!-- Sunday -->
+              <div class="flex-1 flex flex-col items-center gap-3">
+                <div class="w-full bg-[#F0EDE8] rounded-lg relative flex items-end justify-center" style="height: 100%;">
+                  <div class="bar w-full" data-height="50%" style="height: 0%;">
+                    <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-[#2A2A2A] text-white px-3 py-1 rounded-lg text-sm font-semibold opacity-0 transition-opacity duration-300 whitespace-nowrap chart-tooltip">
+                      4.0h
+                    </div>
+                  </div>
+                </div>
+                <span class="text-sm font-semibold text-[#706C64]">Sun</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- App Breakdown -->
+          <div class="card p-8 fade-in" style="animation-delay: 0.6s;">
+            <div class="mb-8">
+              <h2 class="text-2xl font-bold text-[#2A2A2A] mb-1">App Breakdown</h2>
+              <p class="text-[#706C64]">Most used applications this week</p>
+            </div>
+
+            <div class="space-y-6" id="appList">
+              <!-- Apps will be inserted here by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+          <div class="sidebar space-y-6">
+            <!-- Daily Limit Ring -->
+            <div class="card p-8">
+              <h3 class="text-lg font-bold text-[#2A2A2A] mb-6">Today's Progress</h3>
+              
+              <div class="flex items-center justify-center mb-6">
+                <div class="relative">
+                  <svg class="w-48 h-48 transform -rotate-90">
+                    <circle cx="96" cy="96" r="88" stroke="#F0EDE8" stroke-width="12" fill="none" />
+                    <circle 
+                      cx="96" 
+                      cy="96" 
+                      r="88" 
+                      stroke="url(#gradient)" 
+                      stroke-width="12" 
+                      fill="none" 
+                      stroke-linecap="round"
+                      class="ring-progress"
+                      stroke-dasharray="552.92"
+                      stroke-dashoffset="552.92"
+                      id="ringProgress"
+                    />
+                    <defs>
+                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#6B8E7F;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#8BA898;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <div class="display-font text-5xl font-bold text-[#2A2A2A]">
+                      <span class="number-count" data-target="5.8">0</span><span class="text-2xl text-[#706C64]">h</span>
+                    </div>
+                    <p class="text-[#706C64] text-sm font-medium mt-1">of 7h limit</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-[#6B8E7F] bg-opacity-5 rounded-2xl p-4 border-l-4 border-[#6B8E7F]">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-[#6B8E7F] flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-[#2A2A2A] mb-1">On track</p>
+                    <p class="text-sm text-[#706C64]">You have 1.2h remaining today</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Weekly Comparison -->
+            <div class="card p-8">
+              <h3 class="text-lg font-bold text-[#2A2A2A] mb-6">Weekly Comparison</h3>
+              
+              <div class="space-y-5">
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm font-medium text-[#706C64]">This Week</span>
+                    <span class="display-font text-xl font-bold text-[#2A2A2A]">42h</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill bg-gradient-to-r from-[#6B8E7F] to-[#8BA898]" data-width="100%" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm font-medium text-[#706C64]">Last Week</span>
+                    <span class="display-font text-xl font-bold text-[#706C64]">37.5h</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill bg-[#E8E4DD]" data-width="89%" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <div class="divider my-5"></div>
+
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-[#706C64]">Change</span>
+                  <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-[#FF9F80]" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="display-font text-xl font-bold text-[#FF9F80]">+12%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card p-8">
+              <h3 class="text-lg font-bold text-[#2A2A2A] mb-6">Insights</h3>
+              
+              <div class="space-y-4">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-[#8B7FE8] bg-opacity-10 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-[#8B7FE8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"></path>
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="font-semibold text-[#2A2A2A] text-sm mb-1">Peak hours</p>
+                    <p class="text-xs text-[#706C64]">8PM–11PM (avg 2.1h)</p>
+                  </div>
+                </div>
+
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-[#F4A261] bg-opacity-10 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-[#F4A261]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="font-semibold text-[#2A2A2A] text-sm mb-1">Most productive</p>
+                    <p class="text-xs text-[#706C64]">Wednesday (4.6h total)</p>
+                  </div>
+                </div>
+
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-[#6B8E7F] bg-opacity-10 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-[#6B8E7F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="font-semibold text-[#2A2A2A] text-sm mb-1">Pickups</p>
+                    <p class="text-xs text-[#706C64]">94 times today</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // App data
+    const apps = [
+      { name: 'Instagram', hours: 14.2, color: '#E4405F', percentage: 68, icon: 'IG' },
+      { name: 'YouTube', hours: 8.5, color: '#FF0000', percentage: 41, icon: 'YT' },
+      { name: 'Twitter', hours: 6.8, color: '#1DA1F2', percentage: 33, icon: 'TW' },
+      { name: 'Safari', hours: 5.2, color: '#006CFF', percentage: 25, icon: 'SF' },
+      { name: 'Messages', hours: 3.8, color: '#00D856', percentage: 18, icon: 'MS' },
+      { name: 'TikTok', hours: 2.3, color: '#000000', percentage: 11, icon: 'TT' },
+      { name: 'Spotify', hours: 1.2, color: '#1DB954', percentage: 6, icon: 'SP' }
+    ];
+
+    // Number count-up animation
+    function animateNumber(element, duration = 2000) {
+      const target = parseFloat(element.dataset.target);
+      const isDecimal = target % 1 !== 0;
+      const start = 0;
+      const startTime = Date.now();
+
+      function update() {
+        const now = Date.now();
+        const progress = Math.min((now - startTime) / duration, 1);
+        const easeProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const current = start + (target - start) * easeProgress;
+        
+        element.textContent = isDecimal ? current.toFixed(1) : Math.floor(current);
+        
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          element.textContent = isDecimal ? target.toFixed(1) : target;
+        }
+      }
+
+      update();
+    }
+
+    // Animate all number counters
+    document.addEventListener('DOMContentLoaded', () => {
+      const counters = document.querySelectorAll('.number-count');
+      setTimeout(() => {
+        counters.forEach(counter => animateNumber(counter));
+      }, 300);
+
+      // Animate bar chart
+      setTimeout(() => {
+        const bars = document.querySelectorAll('.bar');
+        bars.forEach((bar, index) => {
+          setTimeout(() => {
+            bar.style.height = bar.dataset.height;
+          }, index * 100);
+        });
+      }, 800);
+
+      // Animate progress bars
+      setTimeout(() => {
+        const progressBars = document.querySelectorAll('.progress-fill');
+        progressBars.forEach((bar, index) => {
+          setTimeout(() => {
+            bar.style.width = bar.dataset.width;
+          }, index * 150);
+        });
+      }, 1200);
+
+      // Animate ring progress
+      setTimeout(() => {
+        const ring = document.getElementById('ringProgress');
+        const circumference = 2 * Math.PI * 88;
+        const progress = 5.8 / 7; // 5.8h of 7h
+        const offset = circumference * (1 - progress);
+        ring.style.strokeDashoffset = offset;
+      }, 1000);
+
+      // Render app list
+      const appList = document.getElementById('appList');
+      apps.forEach((app, index) => {
+        const appEl = document.createElement('div');
+        appEl.className = 'flex items-center gap-4 opacity-0';
+        appEl.style.animation = `fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) ${0.8 + index * 0.1}s forwards`;
+        appEl.innerHTML = `
+          <div class="app-icon" style="background: ${app.color}15; color: ${app.color};">
+            ${app.icon}
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-semibold text-[#2A2A2A]">${app.name}</span>
+              <span class="display-font text-lg font-bold text-[#2A2A2A]">${app.hours}h</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="background: ${app.color}; width: 0%;" data-width="${app.percentage}%"></div>
+            </div>
+          </div>
+          <span class="text-sm font-semibold text-[#706C64] min-w-[3rem] text-right">${app.percentage}%</span>
+        `;
+        appList.appendChild(appEl);
+      });
+
+      // Animate app progress bars after they're rendered
+      setTimeout(() => {
+        const appProgressBars = appList.querySelectorAll('.progress-fill');
+        appProgressBars.forEach((bar, index) => {
+          setTimeout(() => {
+            bar.style.width = bar.dataset.width;
+          }, index * 100);
+        });
+      }, 1500);
+
+      // Bar chart hover tooltips
+      document.querySelectorAll('.bar').forEach(bar => {
+        bar.addEventListener('mouseenter', (e) => {
+          const tooltip = e.currentTarget.querySelector('.chart-tooltip');
+          tooltip.style.opacity = '1';
+        });
+        bar.addEventListener('mouseleave', (e) => {
+          const tooltip = e.currentTarget.querySelector('.chart-tooltip');
+          tooltip.style.opacity = '0';
+        });
+      });
+    });
+  </script>
+</body>
+</html>
